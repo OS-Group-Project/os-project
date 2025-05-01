@@ -1,0 +1,106 @@
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Scanner;
+import java.util.concurrent.locks.ReentrantLock;
+
+public class ThreadProcessSimulation {
+   public ThreadProcessSimulation() {
+   }
+
+   public static void main(String[] var0) {
+      List var1 = readProcessesFromFile("processes.txt");
+      if (var1.isEmpty()) {
+         System.out.println("No processes found. Creating sample processes.");
+         var1.add(new Process(1, 0, 5, 2));
+         var1.add(new Process(2, 2, 3, 1));
+         var1.add(new Process(3, 4, 2, 3));
+      }
+
+      System.out.println("Process Information:");
+      Iterator var2 = var1.iterator();
+
+      while(var2.hasNext()) {
+         Process var3 = (Process)var2.next();
+         System.out.println(var3);
+      }
+
+      System.out.println();
+      BoundedBuffer var10 = new BoundedBuffer(5);
+      ReentrantLock var11 = new ReentrantLock();
+      Producer var4 = new Producer(var10, var1);
+      byte var5 = 2;
+      ArrayList var6 = new ArrayList();
+
+      Consumer var8;
+      for(int var7 = 1; var7 <= var5; ++var7) {
+         var8 = new Consumer(var7, var10, var11);
+         var6.add(var8);
+         var8.start();
+      }
+
+      var4.start();
+
+      try {
+         var4.join();
+         System.out.println("Producer has finished adding all processes");
+         Thread.sleep((long)(var1.size() * 200));
+         Iterator var12 = var6.iterator();
+
+         while(var12.hasNext()) {
+            var8 = (Consumer)var12.next();
+            var8.stopConsuming();
+         }
+
+         var12 = var6.iterator();
+
+         while(var12.hasNext()) {
+            var8 = (Consumer)var12.next();
+            var8.join();
+         }
+
+         System.out.println("All processes have been executed!");
+      } catch (InterruptedException var9) {
+         System.out.println("Main thread interrupted: " + var9.getMessage());
+         Thread.currentThread().interrupt();
+      }
+
+   }
+
+   private static List<Process> readProcessesFromFile(String var0) {
+      ArrayList var1 = new ArrayList();
+
+      try {
+         Scanner var2 = new Scanner(new File(var0));
+         String var3;
+         if (var2.hasNextLine()) {
+            var3 = var2.nextLine();
+            if (!var3.matches("\\d+.*")) {
+            }
+         }
+
+         while(var2.hasNextLine()) {
+            var3 = var2.nextLine().trim();
+            if (!var3.isEmpty()) {
+               String[] var4 = var3.split("\\s+");
+               int var5 = Integer.parseInt(var4[0]);
+               int var6 = Integer.parseInt(var4[1]);
+               int var7 = Integer.parseInt(var4[2]);
+               int var8 = var4.length > 3 ? Integer.parseInt(var4[3]) : 0;
+               var1.add(new Process(var5, var6, var7, var8));
+            }
+         }
+
+         var2.close();
+         System.out.println("Successfully read " + var1.size() + " processes from file.");
+      } catch (FileNotFoundException var9) {
+         System.out.println("File not found: " + var9.getMessage());
+      } catch (Exception var10) {
+         System.out.println("Error reading file: " + var10.getMessage());
+      }
+
+      return var1;
+   }
+}
